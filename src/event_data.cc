@@ -210,7 +210,7 @@ namespace grpc_labview
         else
         {
             assert(_status == CallStatus::Finish);
-            gPointerManager.UnregisterPointer(_methodData.get());
+            gPointerManager.UnregisterPointer(_methodData);
             delete this;
         }
     }
