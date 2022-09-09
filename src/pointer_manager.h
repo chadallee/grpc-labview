@@ -32,6 +32,9 @@ namespace grpc_labview
         /// Call UnregisterPointer to allow the pointer to be destroyed.
         T* RegisterPointer(T* ptr);
 
+        /// Register a shared_ptr. This will allow multiple shared pointers to behave with one another and only call delete once.
+        std::shared_ptr<T> RegisterPointer(std::shared_ptr<T> ptr);
+
         /// Get the pointer for a given pointer.
         /// If the pointer has been registered, returns a shared_ptr containing the requested pointer.
         /// If the pointer is null or unregistered, returns a default std::shared_ptr and optionally sets a status code.
@@ -42,6 +45,9 @@ namespace grpc_labview
         /// (unless some other callstack still has a copy of the std::shared_ptr returned by the GetPointer method).
         /// Returns true if the pointer was found (and removed), false otherwise
         bool UnregisterPointer(T* ptr);
+
+        /// Unregister a given shared_ptr.
+        bool UnregisterPointer(std::shared_ptr<T> ptr);
 
     private:
         std::map<T*, std::shared_ptr<T>> _registeredPointers;
@@ -92,16 +98,22 @@ namespace grpc_labview
     template <typename T>
     T* PointerManager<T>::RegisterPointer(T* ptr)
     {
+        return RegisterPointer(std::shared_ptr<T>(ptr)).get();
+    }
+
+    template <typename T>
+    std::shared_ptr<T> PointerManager<T>::RegisterPointer(std::shared_ptr<T> ptr)
+    {
         std::lock_guard<std::mutex> lock(_mutex);
         if (!ptr)
         {
             std::cerr << "ERROR: CANNOT REGISTER A NULL POINTER" << std::endl;
-            return nullptr;
+            return ptr;
         }
 
-        if (_registeredPointers.find(ptr) == _registeredPointers.end())
+        if (_registeredPointers.find(ptr.get()) == _registeredPointers.end())
         {
-            _registeredPointers.insert({ ptr, std::shared_ptr<T>(ptr) });
+            _registeredPointers.insert({ ptr.get(), ptr });
         }
         return ptr;
     }
@@ -111,5 +123,11 @@ namespace grpc_labview
     {
         std::lock_guard<std::mutex> lock(_mutex);
         return _registeredPointers.erase(ptr) > 0;
+    }
+
+    template <typename T>
+    bool PointerManager<T>::UnregisterPointer(std::shared_ptr<T> ptr)
+    {
+        return UnregisterPointer(ptr.get());
     }
 }

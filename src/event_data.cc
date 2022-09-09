@@ -192,7 +192,7 @@ namespace grpc_labview
                 _requestDataReady = true;
 
                 _methodData = std::make_shared<GenericMethodData>(this, &_ctx, _request, _response);
-                gPointerManager.RegisterPointer(_methodData.get());
+                gPointerManager.RegisterPointer(_methodData);
                 _server->SendEvent(name, static_cast<gRPCid*>(_methodData.get()));
             }
             else
@@ -210,6 +210,7 @@ namespace grpc_labview
         else
         {
             assert(_status == CallStatus::Finish);
+            gPointerManager.UnregisterPointer(_methodData.get());
             delete this;
         }
     }
