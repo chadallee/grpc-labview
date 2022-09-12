@@ -98,7 +98,18 @@ namespace grpc_labview
     template <typename T>
     T* PointerManager<T>::RegisterPointer(T* ptr)
     {
-        return RegisterPointer(std::shared_ptr<T>(ptr)).get();
+        std::lock_guard<std::mutex> lock(_mutex);
+        if (!ptr)
+        {
+            std::cerr << "ERROR: CANNOT REGISTER A NULL POINTER" << std::endl;
+            return ptr;
+        }
+
+        if (_registeredPointers.find(ptr) == _registeredPointers.end())
+        {
+            _registeredPointers.insert({ ptr, std::shared_ptr<T>(ptr) });
+        }
+        return ptr;
     }
 
     template <typename T>
